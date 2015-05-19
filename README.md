@@ -10,10 +10,9 @@ Please cite this paper if you use GUTSS for your project.
 ###########
 # License #
 ###########
-```
 This software is licensed under GPL version 3.0.
 http://www.gnu.org/licenses/gpl-3.0-standalone.html
-```
+
 
 ################
 # Requirements #
@@ -36,40 +35,51 @@ On Ubuntu: python-psutil
 #######################
 
 decompress files
-  $ tar xzvf GUTSS-1.0.tar.gz
+```
+$ tar xzvf GUTSS-1.0.tar.gz
+```
 
 create install directory if it doesn't already exist;
 choose another path if you wish
-  $ sudo mkdir -p /usr/local/bin
+```
+$ sudo mkdir -p /usr/local/bin
+```
 
 install programs
-  $ sudo cp GUTSS-1.0/* /usr/local/bin
+```
+$ sudo cp GUTSS-1.0/* /usr/local/bin
+```
 
 make programs executable
-  $ sudo chmod 755 /usr/local/bin/GUTSS
-  $ sudo chmod 755 /usr/local/bin/query_per_sequence
+```
+$ sudo chmod 755 /usr/local/bin/GUTSS
+$ sudo chmod 755 /usr/local/bin/query_per_sequence
+```
 
 #######################
 # Install from source #
 #######################
 
 decompress files
-  $ tar xzvf GUTSS-1.0.tar.gz
+```
+$ tar xzvf GUTSS-1.0.tar.gz
+```
 
 borrow some Jellyfish code and patch it
-  $ cd /path/to/jellyfish/source/code
-
-  $ cd examples/query_per_sequence
-
-  $ cp /path/to/GUTSS-1.0/query_per_sequence.patch ./
-
-  $ patch -p0 <query_per_sequence.patch
+```
+$ cd /path/to/jellyfish/source/code
+$ cd examples/query_per_sequence
+$ cp /path/to/GUTSS-1.0/query_per_sequence.patch ./
+$ patch -p0 <query_per_sequence.patch
+```
 
 now compile the patched code...
 Jellyfish must be properly installed for the pkgconfig directory to exist.
 If you used a different installation directory for Jellyfish, you
 will need to adjust the path to the pkgconfig directory.
-  $ env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig make
+```
+$ env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig make
+```
 
 The query_per_sequence program is the only one that needs to be compiled.
 The rest of the installation can proceed just like the binary install.
@@ -81,10 +91,14 @@ The rest of the installation can proceed just like the binary install.
 compare the reads sampleA to the reads in sample B,
 assuming GUTSS is installed in /usr/local/bin, and
 that directory is in your PATH
-  $ GUTSS -a sampleA.fastq -b sampleB.fastq -o test.out -k 31
+```
+$ GUTSS -a sampleA.fastq -b sampleB.fastq -o test.out -k 31
+```
 
 a more complex example, which may be useful for Ubuntu
-  $ env LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib GUTSS -a sampleA.fq -b sampleB.fq -o test.out -k 31 -q /usr/local/bin/query_per_sequence -j /usr/local/bin/jellyfish
+```
+$ env LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib GUTSS -a sampleA.fq -b sampleB.fq -o test.out -k 31 -q /usr/local/bin/query_per_sequence -j /usr/local/bin/jellyfish
+```
 
 Run the program without arguments to get all the possible options.
 
