@@ -1,0 +1,409 @@
+#!/usr/bin/env python
+#
+# GUTSS: General Utility for Testing Sequence Similarity
+#
+# This utility compares Fastq sequence and calculates similarity
+# based on K-mers.
+#
+# This software was published to accompany the study:
+# An alignment free sequence comparison method for use in human
+# intestinal microbiome and fecal microbiota transplantation analysis,
+# by Brittnacher, et al, 2015
+#
+# This software is licensed under GPL 3.0.
+# http://www.gnu.org/licenses/gpl-3.0-standalone.html
+#
+
+#------------------------------------------------------------------------------
+# modules
+#------------------------------------------------------------------------------
+import os, sys, psutil, optparse, threading, logging, time
+from multiprocessing import cpu_count
+from subprocess import PIPE, call
+from tempfile import NamedTemporaryFile
+from itertools import izip
+
+#------------------------------------------------------------------------------
+# global variables
+#------------------------------------------------------------------------------
+version = "1.0.0"
+
+#------------------------------------------------------------------------------
+# set up logging
+#------------------------------------------------------------------------------
+logging.basicConfig(level=logging.INFO,
+    format='[%(levelname)s] (%(threadName)-10s) %(message)s',
+)
+
+#------------------------------------------------------------------------------
+# classes
+#------------------------------------------------------------------------------
+class Option (optparse.Option):
+
+    ATTRS = optparse.Option.ATTRS + ['required']
+
+    def _check_required (self):
+        if self.required and not self.takes_value():
+            raise OptionError(
+                "required flag set for option that doesn't take a value",
+                 self)
+
+    CHECK_METHODS = optparse.Option.CHECK_METHODS + [_check_required]
+
+    def process (self, opt, value, values, parser):
+        optparse.Option.process(self, opt, value, values, parser)
+        parser.option_seen[self] = 1
+
+class OptionParser (optparse.OptionParser):
+
+    def _init_parsing_state (self):   
+        optparse.OptionParser._init_parsing_state(self)
+        self.option_seen = {}
+
+    def check_values (self, values, args):
+        for option in self.option_list:
+            if (isinstance(option, Option) and
+                option.required and
+                not self.option_seen.has_key(option)):
+                self.error("\nERROR: Required flag " + str(option) +\
+                    " was not supplied. There may be other required " +\
+                    "flags too.\n")
+        return (values, args)
+
+    def error(self, msg):
+        self.print_help()
+        print msg
+        sys.exit()
+
+#------------------------------------------------------------------------------
+# functions
+#------------------------------------------------------------------------------
+def do_options():
+    '''Get command line options. This should be migrated to argparse soon.'''
+
+    usage = "\n%prog --afastq </path/to/file> --bfastq </path/to/file> " +\
+        " --outfile </path/to/file> --kmer <int> [ --apair </path/to/file> " +\
+        "--bpair </path/to/file> --jellyfish </path/to/file> --cat " +\
+        "</path/to/file> --qps </path/to/file> --tempdir </path/to/dir> " +\
+        "--cores <int>]"
+    desc = "Calculate similarity for two sets of Fastq reads"
+    parser = OptionParser(prog=sys.argv[0], version=version, usage=usage,\
+        option_class=Option, description=desc)
+    parser.add_option("-a", "--afastq", required=True, help="specifies " +\
+        "the path to the 'A' Fastq file")
+    parser.add_option("-p", "--apair", required=False, help="specifies " +\
+        "the path to the read two 'A' Fastq file. You can use this " +\
+        "for paired end runs, or just cat the files together.")
+    parser.add_option("-b", "--bfastq", required=True, help="specifies " +\
+        "the path to the 'B' Fastq file")
+    parser.add_option("-r", "--bpair", required=False, help="specifies " +\
+        "the path to the read two 'B' Fastq file. You can use this " +\
+        "for paired end runs, or just cat the files together.")
+    parser.add_option("-o", "--outfile", required=True, help="specifies " +\
+        "the path to the output file. the output file format is tab " +\
+        "delimited, and the columns, in order, are: (1) number of reads " +\
+        "in sample A where sum(kA - kB) < 0; (2) number of reads in " +\
+        "sample A where sum(kA - kB) = 0; (3) total number of reads in " +\
+        "sample A; (4) number of reads in sample B where sum(kB - kA) < 0; " +\
+        "(5) number of reads in sample B where sum(kB - kA) = 0; (6) " +\
+        "total number of reads in sample B; and (7) similarity score (%), " +\
+        "where kA = count for a single k-mer on that read in A.")
+    parser.add_option("-k", "--kmer", required=True, type="int",\
+        help="specifies the K-mer value to use for the run.")
+    parser.add_option("-j", "--jellyfish", required=False, type="str",\
+        default="/usr/local/jellyfish/bin/jellyfish", help="specifies the " +\
+        "path to the Jellyfish program. The default is %default.")
+    parser.add_option("-c", "--cat", required=False, type="str",\
+        default="/bin/cat", help="specifies the path to the 'cat' program. " +\
+        "The default is %default.")
+    parser.add_option("-q", "--qps", required=False, type="str",\
+        default="/usr/local/jellyfish/bin/query_per_sequence",\
+        help="specifies the path to the query_per_sequence program. " +\
+        "The default is %default.")
+    parser.add_option("-t", "--tempdir", required=False, type="str",\
+        default="/dev/shm", help="specifies the path to the temporary " +\
+        "directory. The default is %default, which is recommended if " +\
+        "your system implements tmpfs, as most recent Linux distributuions " +\
+        "do.")
+    parser.add_option("-n", "--cores", required=False, type="int",\
+        help="specifies the number of CPU cores to use. By default this " +\
+        "is automatically determined by the program.")
+    return parser.parse_args()
+
+def dir_check(dir):
+    '''Create directory if it does not exist'''
+
+    if not os.path.isdir(dir): os.mkdir(dir)
+
+def print_free_mem():
+    '''Show available memory'''
+
+    # show available memory in GB
+    mem = psutil.virtual_memory().available
+    gigsfree = (((mem / 1024) / 1024) / 1024)
+    etext = "Free memory: " + str(gigsfree) + "G"
+    logging.info(etext)
+
+def print_etime(stime):
+    '''Get elapsed time'''
+
+    # show time elapsed
+    etext = "Approximate elapsed time: " +\
+        str("{0:.1f}".format((time.time() - stime) / 60.0)) + " minutes"
+    logging.info(etext)
+
+def get_best_core_count():
+    '''Determine number of available cores;
+       returns number to be used'''
+
+    # specify two less than the number of available cores
+    count = cpu_count()
+    if count > 2: count = count - 2
+    return count
+
+def make_kmer_hash(afastq, apair, kmer, cat, jellyfish, tempdir, mycores):
+    '''Construct hash of k-mers/counts for reads in afastq;
+       returns name of hash file'''
+
+    # get number of cores to use if not provided
+    if mycores == None: mycores = get_best_core_count()   
+    if apair != None:
+        etext = "Hashing " + afastq + " and " + apair + " with " +\
+            str(mycores) + " CPU cores..."
+    else:
+        etext = "Hashing " + afastq + " with " + str(mycores) + " CPU cores..."
+    logging.info(etext)
+
+    # init hash
+    hash = NamedTemporaryFile(delete=False, dir=tempdir)
+    hash.close
+    etext = "Creating K-mer hash: " + hash.name
+    logging.info(etext)
+
+    # execute Jellyfish
+    if apair != None:
+        gens = NamedTemporaryFile(delete=False, dir=outdir)
+        gens.write(cat + " " + afastq + "\n")
+        gens.write(cat + " " + apair + "\n")
+        gens.close
+        args = [jellyfish, "count", "-C", "-m", str(kmer), "-s", "100M", "-t",\
+            str(mycores), "-o", hash.name, "-g", gens.name, "-G", "2"]
+        call(args, stdout=PIPE, stdin=PIPE, stderr=PIPE, shell=False)
+    else:
+        args = [jellyfish, "count", "-C", "-m", str(kmer), "-s", "100M", "-t",\
+            str(mycores), "-o", hash.name, afastq]
+        call(args, stdout=PIPE, stdin=PIPE, stderr=PIPE, shell=False)
+
+    return hash.name
+
+def call_qps(xhash, xfast, ofile, qps):
+    '''Constructs call to query_per_sequence
+       to read hashes and write counts to tmp files'''
+
+    # application call
+    logging.info('Starting...')
+    args1 = [qps, xhash, xfast]
+    call(args1, stdout=ofile, shell=False)
+    logging.info('...Exiting')
+
+def read_hashes(ahash, bhash, afast, bfast, qps, tempdir):
+    '''Enumerate k-mers:
+       for k-mers in A reads:
+           AvA: counts in A
+           AvB: counts in B
+       for k-mers in B reads:
+           BvB: counts in B
+           BvA: counts in A
+    Returns names of temp files with k-mer counts'''
+
+    etext = "Writing hash count: " + ahash + " " + bhash
+    logging.info(etext)
+
+    # create file names for k-mer count tmp files
+    AvA = NamedTemporaryFile(delete=False, dir=tempdir)
+    AvB = NamedTemporaryFile(delete=False, dir=tempdir)
+    BvB = NamedTemporaryFile(delete=False, dir=tempdir)
+    BvA = NamedTemporaryFile(delete=False, dir=tempdir)
+
+    # construct threads for reading k-mer hash, writing counts to tmp file
+    t1 = threading.Thread(name='AvA-thread', target=call_qps,\
+        args=(ahash, afast, AvA, qps,))
+    t2 = threading.Thread(name='AvB-thread', target=call_qps,\
+        args=(bhash, afast, AvB, qps,))
+    t3 = threading.Thread(name='BvB-thread', target=call_qps,\
+        args=(bhash, bfast, BvB, qps,))
+    t4 = threading.Thread(name='BvA-thread', target=call_qps,\
+        args=(ahash, bfast, BvA, qps,))
+
+    # execute
+    t1.setDaemon(True)
+    t2.setDaemon(True)
+    t3.setDaemon(True)
+    t4.setDaemon(True)
+    t1.start()
+    t2.start()
+    t3.start()
+    t4.start()
+    t1.join()
+    t2.join()
+    t3.join()
+    t4.join()
+
+    return (AvB.name, BvA.name, AvA.name, BvB.name)
+
+def load_read_counts(cfile):
+    '''Read file of k-mer counts; return lines as list'''
+
+    # return lines from cfile as list
+    return [line[:-1] for line in open(cfile)]
+
+def sum_indicator_functions(AA, AB):
+    '''Returns the number of reads with lesser and equal differences'''
+
+    # counts = [number A<B, number A=B, total number of A reads]
+    counts = [0, 0, len(AA)]
+
+    # process read counts
+    for i in range(len(AA)):
+        if ((i + 1) % 1000000) == 0:
+            etext = i + 1, "reads processed..."
+            logging.info(etext)
+
+        # k-mer counts for x reads: 
+        # xx = number of k-mers in sample x
+        # xy = number of k-mers in sample y
+        xx = [(int(c) - 1) for c in AA[i].strip().split()]
+        xy = [int(c) for c in AB[i].strip().split()]
+      
+        # calculate sum of the differences
+        sum = 0
+        zero = True
+        for xxj, xyj in izip(xx, xy):
+            # only increment counts where xxj and xyj are both nonzero
+            if (xxj > 0) and (xyj > 0):
+                sum += xxj - xyj
+                zero = False
+
+        # exclude case where xxj = xyj = 0 for all j
+        if zero: continue
+
+        # increment counts
+        if sum < 0: counts[0] += 1      # x < y
+        elif sum == 0: counts[1] += 1   # x = y
+
+    return counts
+
+def format_type(item):
+    '''Determines type for item; returns format string'''
+
+    # possible formats
+    typmap = { 'int': "%i", 'float': "%f", 'str': "%s" }
+
+    # return appropriate type
+    if isinstance(item,int): return typmap['int']
+    elif isinstance(item,float): return typmap['float']
+    return typmap['str']
+
+def format_data(data):
+    '''Returns tab-delimited format for data list according to type'''
+
+    # create format string
+    format = []
+    for item in data: format.append(format_type(item))
+    return "\t".join(format) + "\n"
+
+def get_similarity(Ac, Bc, outfile):
+    '''Returns similarity score'''
+
+    etext = "Calculating similarity score..."
+    logging.info(etext)
+    
+    # similarity score
+    sim = 200.0 * (Ac[0] + Bc[0] + (Ac[1] + Bc[1]) / 2.0) / (Ac[2] + Bc[2])
+
+    # create data list
+    data = []
+    for i in Ac: data.append(i)
+    for i in Bc: data.append(i)
+    data.append(sim)
+
+    # write data list
+    o = open(outfile, 'w')
+    line = format_data(data) % tuple(data)
+    o.write(line)
+    o.close()
+
+def delete_files(tmpfiles):
+    '''Deletes temp files'''
+
+    for f in tmpfiles:
+        etext = "Deleting " + f + "..."
+        logging.info(etext)
+        os.remove(f)
+
+#------------------------------------------------------------------------------
+# main
+#------------------------------------------------------------------------------
+
+def main():
+    # init opts, args
+    opts, args = do_options()
+    opts.afastq = os.path.abspath(opts.afastq)
+    opts.bfastq = os.path.abspath(opts.bfastq)
+    if opts.apair != None: opts.apair = os.path.abspath(opts.apair)
+    if opts.bpair != None: opts.apair = os.path.abspath(opts.bpair)
+    opts.outfile = os.path.abspath(opts.outfile)
+    dir_check(opts.tempdir)
+
+    # make K-mer hash
+    print_free_mem()
+    start_time = time.time()
+    Atmp = make_kmer_hash(opts.afastq, opts.apair, opts.kmer, opts.cat,\
+        opts.jellyfish, opts.tempdir, opts.cores)
+    print_etime(start_time)
+    print_free_mem()
+    Btmp = make_kmer_hash(opts.bfastq, opts.bpair, opts.kmer, opts.cat,\
+        opts.jellyfish, opts.tempdir, opts.cores)
+    print_etime(start_time)
+    print_free_mem()
+
+    # read hash and write counts to tmp files
+    aVb, bVa, aVa, bVb = read_hashes(Atmp, Btmp, opts.afastq, opts.bfastq,
+        opts.qps, opts.tempdir)
+    print_free_mem()
+    delete_files((Atmp, Btmp))
+    print_free_mem()
+    print_etime(start_time)
+
+    # process A reads
+    logging.info("Loading A read counts...")
+    AvA = load_read_counts(aVa)
+    AvB = load_read_counts(aVb)
+    print_free_mem()
+    logging.info("Calculating A read counts...")
+    AReadCounts = sum_indicator_functions(AvA, AvB)
+    delete_files((aVa, aVb))
+    print_free_mem()
+    print_etime(start_time)
+
+    # process B reads
+    logging.info("Loading B read counts...")
+    BvA = load_read_counts(bVa)
+    BvB = load_read_counts(bVb)
+    print_free_mem()
+    logging.info("Calculating B read counts...")
+    BReadCounts = sum_indicator_functions(BvB, BvA)
+    delete_files((bVb, bVa))
+    print_free_mem()
+    print_etime(start_time)
+
+    # calculate similarity
+    get_similarity(AReadCounts, BReadCounts, opts.outfile)
+
+    # cleanup
+    print_etime(start_time)
+    logging.info("Terminating...")
+    return 0
+
+if __name__ == "__main__":
+    main()

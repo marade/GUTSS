@@ -1,0 +1,11 @@
+--- query_per_sequence.cc   2015-04-08 11:02:24.605589082 -0700
++++ query_per_sequence.cc   2015-04-08 11:03:59.001619516 -0700
+@@ -43,7 +43,7 @@
+     sequence_parser::job j(parser);
+     if(j.is_empty()) break;
+     for(size_t i = 0; i < j->nb_filled; ++i) {
+-      std::cout << ">" << j->data[i].header << "\n";
++/*    std::cout << ">" << j->data[i].header << "\n"; */
+       mers = j->data[i].seq;
+       if(mers != mers_end) {
+         std::cout << db.check(*mers);
