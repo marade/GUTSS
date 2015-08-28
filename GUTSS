@@ -27,6 +27,7 @@ from itertools import izip
 # global variables
 #------------------------------------------------------------------------------
 version = "1.0.0"
+procmem = "/proc/meminfo" 
 
 #------------------------------------------------------------------------------
 # set up logging
@@ -135,6 +136,14 @@ def dir_check(dir):
 
     if not os.path.isdir(dir): os.mkdir(dir)
 
+def size_check(afile, bfile):
+    '''Compare file sizes and warn if they are the same'''
+
+    s1 = os.path.getsize(afile)
+    s2 = os.path.getsize(bfile)
+    if s1 == s2: logging.warn('Comparison files are the same. Results ' +\
+        'may be inaccurate') 
+
 def print_free_mem():
     '''Show available memory'''
 
@@ -206,6 +215,36 @@ def call_qps(xhash, xfast, ofile, qps):
     call(args1, stdout=ofile, shell=False)
     logging.info('...Exiting')
 
+def mon_mem():
+    '''Periodically checks /proc/meminfo, if your system supports it,
+    and tries to detect memory problems with the qps runs'''
+    logging.info('Monitoring memory...')
+    if not os.path.isfile(procmem):
+        logging.info('...No meminfo')
+        return
+    memdict = meminfo()
+    mfree = float(memdict['MemFree'].split(' ')[0])
+    while True:
+        now_count = threading.active_count()
+        if now_count < 3: break
+        memdict = meminfo()
+        shm = float(memdict['Shmem'].split(' ')[0])
+        shm_used = "{0:.2f}".format(100.0 * (shm / mfree))
+        logging.info('Shared Memory Used: ' + str(shm_used) + '%')
+        if float(shm_used) > 95.0:
+            logging.warn('Shared memory used very high. Results may ' +\
+                'be corrupted')
+        time.sleep(10)
+    logging.info('...done')
+
+def meminfo():
+    '''Reads/proc/meminfo'''
+    meminfo=dict()
+    with open(procmem) as f:
+        for line in f:
+            meminfo[line.split(':')[0]] = line.split(':')[1].strip()
+    return meminfo
+
 def read_hashes(ahash, bhash, afast, bfast, qps, tempdir):
     '''Enumerate k-mers:
        for k-mers in A reads:
@@ -216,6 +255,19 @@ def read_hashes(ahash, bhash, afast, bfast, qps, tempdir):
            BvA: counts in A
     Returns names of temp files with k-mer counts'''
 
+    if not os.path.isfile(ahash):
+        logging.error(ahash + ' file is missing')
+        sys.exit()
+    if not os.path.isfile(afast):
+        logging.error(afast + ' file is missing')
+        sys.exit()
+    if not os.path.isfile(bhash):
+        logging.error(bhash + ' file is missing')
+        sys.exit()
+    if not os.path.isfile(bfast):
+        logging.error(bfast + ' file is missing')
+        sys.exit()
+
     etext = "Writing hash count: " + ahash + " " + bhash
     logging.info(etext)
 
@@ -224,6 +276,9 @@ def read_hashes(ahash, bhash, afast, bfast, qps, tempdir):
     AvB = NamedTemporaryFile(delete=False, dir=tempdir)
     BvB = NamedTemporaryFile(delete=False, dir=tempdir)
     BvA = NamedTemporaryFile(delete=False, dir=tempdir)
+
+    # mem watcher thread
+    m1 = threading.Thread(name='mem-watch-thread', target=mon_mem)
 
     # construct threads for reading k-mer hash, writing counts to tmp file
     t1 = threading.Thread(name='AvA-thread', target=call_qps,\
@@ -236,14 +291,17 @@ def read_hashes(ahash, bhash, afast, bfast, qps, tempdir):
         args=(ahash, bfast, BvA, qps,))
 
     # execute
+    m1.setDaemon(True)
     t1.setDaemon(True)
     t2.setDaemon(True)
     t3.setDaemon(True)
     t4.setDaemon(True)
+    m1.start()
     t1.start()
     t2.start()
     t3.start()
     t4.start()
+    m1.join()
     t1.join()
     t2.join()
     t3.join()
@@ -354,6 +412,16 @@ def main():
     if opts.bpair != None: opts.apair = os.path.abspath(opts.bpair)
     opts.outfile = os.path.abspath(opts.outfile)
     dir_check(opts.tempdir)
+    if not os.path.isfile(opts.jellyfish):
+        logging.error(opts.jellyfish + ' not found')
+        sys.exit()
+    if not os.path.isfile(opts.cat):
+        logging.error(opts.cat + ' not found')
+        sys.exit()
+    if not os.path.isfile(opts.qps):
+        logging.error(opts.qps + ' not found')
+        sys.exit()
+    size_check(opts.afastq, opts.bfastq)
 
     # make K-mer hash
     print_free_mem()
@@ -377,6 +445,12 @@ def main():
 
     # process A reads
     logging.info("Loading A read counts...")
+    if not os.path.isfile(aVa):
+        logging.error(aVa + ' is missing')
+        sys.exit()
+    if not os.path.isfile(aVb):
+        logging.error(aVb + ' is missing')
+        sys.exit()
     AvA = load_read_counts(aVa)
     AvB = load_read_counts(aVb)
     print_free_mem()
@@ -388,6 +462,12 @@ def main():
 
     # process B reads
     logging.info("Loading B read counts...")
+    if not os.path.isfile(bVa):
+        logging.error(bVa + ' is missing')
+        sys.exit()
+    if not os.path.isfile(bVb):
+        logging.error(bVb + ' is missing')
+        sys.exit()
     BvA = load_read_counts(bVa)
     BvB = load_read_counts(bVb)
     print_free_mem()
