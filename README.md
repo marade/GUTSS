@@ -95,12 +95,12 @@ Compare the reads sampleA to the reads in sample B,
 assuming GUTSS is installed in /usr/local/bin, and
 that directory is in your PATH:
 ```
-$ GUTSS -a sampleA.fastq -b sampleB.fastq -o test.out -k 31
+$ GUTSS -a sim49a_1M.fq -b sim49b_1M.fq -o test.out -k 31
 ```
 
 A more complex example, which may be useful for Ubuntu:
 ```
-$ env LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib GUTSS -a sampleA.fq -b sampleB.fq -o test.out -k 31 -q /usr/local/bin/query_per_sequence -j /usr/local/bin/jellyfish
+$ env LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib GUTSS -a sim49a_1M.fq -b sim49b_1M.fq test.out -k 31 -q /usr/local/bin/query_per_sequence -j /usr/local/bin/jellyfish
 ```
 
 Run the program without arguments to get all the possible options.
