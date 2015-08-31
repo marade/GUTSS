@@ -223,13 +223,14 @@ def mon_mem():
         logging.info('...No meminfo')
         return
     memdict = meminfo()
-    mfree = float(memdict['MemFree'].split(' ')[0])
+    mtotal = float(memdict['MemTotal'].split(' ')[0])
+    shmtotal = mtotal / 2
     while True:
         now_count = threading.active_count()
         if now_count < 3: break
         memdict = meminfo()
         shm = float(memdict['Shmem'].split(' ')[0])
-        shm_used = "{0:.2f}".format(100.0 * (shm / mfree))
+        shm_used = "{0:.2f}".format(100.0 * (shm / shmtotal))
         logging.info('Shared Memory Used: ' + str(shm_used) + '%')
         if float(shm_used) > 95.0:
             logging.warn('Shared memory used very high. Results may ' +\
