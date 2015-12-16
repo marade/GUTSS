@@ -68,7 +68,7 @@ Decompress files:
 $ tar xzvf GUTSS-1.0.tar.gz
 ```
 
-Borrow some Jellyfish code and patch it:
+Here we use code from the Jellyfish distribution and apply a small patch to make it useful for our purposes:
 ```
 $ cd /path/to/jellyfish/source/code
 $ cd examples/query_per_sequence
