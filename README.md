@@ -28,10 +28,9 @@ Jellyfish 2.2+
 
 http://www.genome.umd.edu/jellyfish.html
 
-You will need the Jellyfish source code in order to install GUTSS. You will
-also need to have Jellyfish itself installed and working.
+Python psutil (available as python-psutil in some distributuions)
 
-On Ubuntu you will need python-psutil.
+You can install from binary or install from source. If you want to install from source you will need the Jellyfish source code. For both types of install you need to have Jellyfish installed and working, so follow the instructions in the Jellyfish manual and be sure to test it.
 
 #######################
 # Install from binary #
