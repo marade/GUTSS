@@ -98,9 +98,11 @@ that directory is in your PATH:
 $ GUTSS -a sim49a_1M.fq -b sim49b_1M.fq -o test.out -k 31
 ```
 
-A more complex example, which may be useful for Ubuntu:
+If you have problems with an LD_LIBRARY_PATH error, you may need to add a path to this environment variable. Here we temporarily add /usr/local/lib to the LD_LIBRARY_PATH with the env command. We also tell GUTSS to find query_per_sequence in /usr/local/bin with the -q flag:
 ```
-$ env LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib GUTSS -a sim49a_1M.fq -b sim49b_1M.fq test.out -k 31 -q /usr/local/bin/query_per_sequence -j /usr/local/bin/jellyfish
+$ env LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib GUTSS -a \
+sim49a_1M.fq -b sim49b_1M.fq test.out -k 31 -q \
+/usr/local/bin/query_per_sequence -j /usr/local/bin/jellyfish
 ```
 
 Run the program without arguments to get all the possible options.
