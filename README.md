@@ -18,9 +18,7 @@ http://www.gnu.org/licenses/gpl-3.0-standalone.html
 ################
 # Requirements #
 ################
-The code may work on a variety of operating systems, but it was only
-tested on Red Hat Enterprise Linux 6 and Ubuntu 14.04. The instructions
-here should be suitable for most currently popular Unix derivatives.
+The code may work on a variety of operating systems, but it was only tested on Red Hat Enterprise Linux 6 and Ubuntu 14.04. The instructions here should be suitable for most currently popular Unix derivatives. You must have the following installed and working at a minimum to run GUTSS:
 
 Python 2.6+
 
@@ -29,7 +27,7 @@ Python psutil (available as python-psutil in some distributions)
 Jellyfish 2.2+
 http://www.genome.umd.edu/jellyfish.html
 
-You can install from binary or install from source. If you want to install from source you will need the Jellyfish source code. For both types of install you need to have the Jellyfish program installed and working, so follow the instructions in the Jellyfish manual and be sure to test it.
+You can install GUTSS from binary or source. If you want to install from source you will need the Jellyfish source code. For both types of install you need to have the Jellyfish program installed and working first, so follow the instructions in the Jellyfish manual and be sure to test it.
 
 #######################
 # Install from binary #
