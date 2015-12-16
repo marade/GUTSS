@@ -40,8 +40,7 @@ Decompress files:
 $ tar xzvf GUTSS-1.0.tar.gz
 ```
 
-Create install directory if it doesn't already exist;
-Choose another path if you wish:
+Create install directory if it doesn't already exist; choose another path if you wish:
 ```
 $ sudo mkdir -p /usr/local/bin
 ```
@@ -81,7 +80,7 @@ Now compile the patched Jellyfish code using the make command and the proper PKG
 $ env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig make
 ```
 
-The query_per_sequence program is the only one that needs to be compiled. The rest of the installation can proceed much like the binary install. Create install directory if it doesn't already exist; Choose another path if you wish:
+The query_per_sequence program is the only one that needs to be compiled. The rest of the installation can proceed much like the binary install. Create the install directory if it doesn't already exist; choose another path if you wish:
 
 ```
 $ sudo mkdir -p /usr/local/bin
