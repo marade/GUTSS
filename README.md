@@ -29,7 +29,7 @@ Python psutil (available as python-psutil in some distributions)
 Jellyfish 2.2+
 http://www.genome.umd.edu/jellyfish.html
 
-You can install from binary or install from source. If you want to install from source you will need the Jellyfish source code. For both types of install you need to have Jellyfish installed and working, so follow the instructions in the Jellyfish manual and be sure to test it.
+You can install from binary or install from source. If you want to install from source you will need the Jellyfish source code. For both types of install you need to have the Jellyfish program installed and working, so follow the instructions in the Jellyfish manual and be sure to test it.
 
 #######################
 # Install from binary #
