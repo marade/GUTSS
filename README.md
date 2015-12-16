@@ -59,6 +59,8 @@ $ sudo chmod 755 /usr/local/bin/GUTSS
 $ sudo chmod 755 /usr/local/bin/query_per_sequence
 ```
 
+If you have trouble with the binary distribution, please try installing from source.
+
 #######################
 # Install from source #
 #######################
