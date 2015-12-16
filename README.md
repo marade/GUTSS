@@ -76,10 +76,7 @@ $ cp /path/to/GUTSS-1.0/query_per_sequence.patch ./
 $ patch -p0 <query_per_sequence.patch
 ```
 
-Now compile the patched code...
-Jellyfish must be properly installed for the pkgconfig directory to exist.
-If you used a different installation directory for Jellyfish, you
-will need to adjust the path to the pkgconfig directory.
+Now compile the patched Jellyfish code using the make command and the proper PKG_CONFIG_PATH environment variable. Since you followed the requirements and the Jellyfish program is properly installed, it will have a pkgconfig subdirectory. You may need to adjust the path to this directory, depending on where you installed the Jellyfish program:
 ```
 $ env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig make
 ```
