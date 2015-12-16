@@ -81,8 +81,26 @@ Now compile the patched Jellyfish code using the make command and the proper PKG
 $ env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig make
 ```
 
-The query_per_sequence program is the only one that needs to be compiled.
-The rest of the installation can proceed just like the binary install.
+The query_per_sequence program is the only one that needs to be compiled. The rest of the installation can proceed much like the binary install. Create install directory if it doesn't already exist; Choose another path if you wish:
+
+```
+$ sudo mkdir -p /usr/local/bin
+```
+
+Install programs :
+```
+$ sudo cp query_per_sequence /usr/local/bin
+
+$ cd /path/to/GUTSS-1.0
+
+$ sudo cp GUTSS /usr/local/bin
+```
+
+Make programs executable:
+```
+$ sudo chmod 755 /usr/local/bin/GUTSS
+$ sudo chmod 755 /usr/local/bin/query_per_sequence
+```
 
 ############
 # Examples #
