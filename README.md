@@ -75,13 +75,15 @@ The query_per_sequence program is the only one that needs to be compiled. The re
 ###################################
 ```
 
+# here we first install Jellyfish from source,
+# and then the GUTSS binaries
+
 # install python-psutil and tools needed to compile Jellyfish
 user@host:~$ sudo apt-get install git linux-headers-generic build-essential python
 …
 
 # we assume you downloaded the compressed Jellyfish
 # source to the Downloads folder in your home directory.
-# this is an install from source for Jellyfish...
 
 # decompress Jellyfish source
 user@host:~$ cd ~/Downloads
