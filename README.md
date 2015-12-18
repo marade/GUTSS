@@ -27,7 +27,7 @@ Python psutil (available as python-psutil in some distributions)
 Jellyfish 2.2+
 http://www.genome.umd.edu/jellyfish.html
 
-You can install GUTSS from binary or source. If you want to install from source you will need the Jellyfish source code. For both types of install you need to have the Jellyfish program installed and working first, so follow the instructions in the Jellyfish manual and be sure to test it.
+You can install GUTSS from binary or source. If you want to install from source you will need the Jellyfish source code. For both types of GUTSS install you need to have the Jellyfish program installed and working first, so follow the instructions in the Jellyfish manual and be sure to test it.
 
 #######################
 # Install from binary #
@@ -80,9 +80,10 @@ user@host:~$ sudo apt-get install git linux-headers-generic build-essential pyth
 …
 
 # we assume you downloaded the compressed Jellyfish
-# source to the Downloads folder in your home directory
+# source to the Downloads folder in your home directory.
+# this is an install from source for Jellyfish...
 
-# decompress Jellyfish
+# decompress Jellyfish source
 user@host:~$ cd ~/Downloads
 user@host:~/Downloads$ tar -xzvf jellyfish-2.2.4.tar.gz
 …
