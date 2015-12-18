@@ -33,19 +33,14 @@ You can install GUTSS from binary or source. If you want to install from source 
 # Install from binary #
 #######################
 
-Decompress files:
-```
-$ tar xzvf GUTSS-1.0.tar.gz
-```
-
 Create install directory if it doesn't already exist; choose another path if you wish:
 ```
 $ sudo mkdir -p /usr/local/bin
 ```
 
-Install programs:
+Install GUTSS and query_per_sequence to install directory:
 ```
-$ sudo cp GUTSS-1.0/* /usr/local/bin
+$ sudo cp GUTSS query_per_sequence /usr/local/bin
 ```
 
 Make programs executable:
@@ -60,11 +55,6 @@ If you have trouble with the binary distribution, please try installing from sou
 # Install from source #
 #######################
 
-Decompress files:
-```
-$ tar xzvf GUTSS-1.0.tar.gz
-```
-
 Here we use code from the Jellyfish distribution and apply a small patch to make it useful for our purposes:
 ```
 $ cd /path/to/jellyfish/source/code
@@ -78,26 +68,7 @@ Now compile the patched Jellyfish code using the make command and the proper PKG
 $ env PKG_CONFIG_PATH=/usr/local/lib/pkgconfig make
 ```
 
-The query_per_sequence program is the only one that needs to be compiled. The rest of the installation can proceed much like the binary install. Create the install directory if it doesn't already exist; choose another path if you wish:
-
-```
-$ sudo mkdir -p /usr/local/bin
-```
-
-Install programs :
-```
-$ sudo cp query_per_sequence /usr/local/bin
-
-$ cd /path/to/GUTSS-1.0
-
-$ sudo cp GUTSS /usr/local/bin
-```
-
-Make programs executable:
-```
-$ sudo chmod 755 /usr/local/bin/GUTSS
-$ sudo chmod 755 /usr/local/bin/query_per_sequence
-```
+The query_per_sequence program is the only one that needs to be compiled. The rest of the installation can proceed much like the binary install.
 
 ###################################
 # Ubuntu Install and Test Example #
