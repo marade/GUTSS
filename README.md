@@ -59,7 +59,7 @@ Here we use code from the Jellyfish distribution and apply a small patch to make
 ```
 $ cd /path/to/jellyfish/source/code
 $ cd examples/query_per_sequence
-$ cp /path/to/GUTSS-1.0/query_per_sequence.patch ./
+$ cp /path/to/GUTSS-master/query_per_sequence.patch ./
 $ patch -p0 <query_per_sequence.patch
 ```
 
