@@ -162,7 +162,9 @@ user@host:~/Downloads/GUTSS-master$ sudo chmod 755 /usr/local/bin/query_per_sequ
 # test run; displays usage without options
 user@host:~/Downloads/GUTSS-master$ GUTSS 
 Usage: 
-/usr/local/bin/GUTSS --afastq </path/to/file> --bfastq </path/to/file>  --outfile </path/to/file> --kmer <int> [ --apair </path/to/file> --bpair </path/to/file> --jellyfish </path/to/file> --cat </path/to/file> --qps </path/to/file> --tempdir </path/to/dir> --cores <int>]
+/usr/local/bin/GUTSS --afastq </path/to/file> --bfastq </path/to/file>  --outfile </path/to/file> \
+--kmer <int> [ --apair </path/to/file> --bpair </path/to/file> --jellyfish </path/to/file> --cat \
+</path/to/file> --qps </path/to/file> --tempdir </path/to/dir> --cores <int>]
 
 Calculate similarity for two sets of Fastq reads
 
@@ -220,7 +222,9 @@ user@host:~/Downloads/GUTSS-master$ gunzip test/*.gz
 
 # run with test data
 # compare the reads in sampleA to the reads in sample B
-user@host:~/Downloads/GUTSS-master$ env LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib GUTSS -a test/sim49a_1M.fq -b test/sim49b_1M.fq -o test.out -k 31 -j /usr/local/bin/jellyfish -q /usr/local/bin/query_per_sequence 
+user@host:~/Downloads/GUTSS-master$ env LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib GUTSS \
+-a test/sim49a_1M.fq -b test/sim49b_1M.fq -o test.out -k 31 -j /usr/local/bin/jellyfish \
+-q /usr/local/bin/query_per_sequence 
 [INFO] (MainThread) Free memory: 3G
 [INFO] (MainThread) Hashing /home/user/Downloads/GUTSS-master/test/sim49a_1M.fq with 2 CPU cores...
 [INFO] (MainThread) Creating K-mer hash: /dev/shm/tmpriyqJY
