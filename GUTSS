@@ -26,7 +26,7 @@ from itertools import izip
 #------------------------------------------------------------------------------
 # global variables
 #------------------------------------------------------------------------------
-version = "1.0.0"
+version = "1.0.2"
 procmem = "/proc/meminfo" 
 
 #------------------------------------------------------------------------------
@@ -185,19 +185,20 @@ def make_kmer_hash(afastq, apair, kmer, cat, jellyfish, tempdir, mycores):
 
     # init hash
     hash = NamedTemporaryFile(delete=False, dir=tempdir)
-    hash.close
+    hash.close()
     etext = "Creating K-mer hash: " + hash.name
     logging.info(etext)
 
     # execute Jellyfish
     if apair != None:
-        gens = NamedTemporaryFile(delete=False, dir=outdir)
+        gens = NamedTemporaryFile(delete=False, dir=tempdir)
         gens.write(cat + " " + afastq + "\n")
         gens.write(cat + " " + apair + "\n")
-        gens.close
+        gens.close()
         args = [jellyfish, "count", "-C", "-m", str(kmer), "-s", "100M", "-t",\
             str(mycores), "-o", hash.name, "-g", gens.name, "-G", "2"]
         call(args, stdout=PIPE, stdin=PIPE, stderr=PIPE, shell=False)
+        os.remove(gens)
     else:
         args = [jellyfish, "count", "-C", "-m", str(kmer), "-s", "100M", "-t",\
             str(mycores), "-o", hash.name, afastq]
