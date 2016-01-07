@@ -198,7 +198,7 @@ def make_kmer_hash(afastq, apair, kmer, cat, jellyfish, tempdir, mycores):
         args = [jellyfish, "count", "-C", "-m", str(kmer), "-s", "100M", "-t",\
             str(mycores), "-o", hash.name, "-g", gens.name, "-G", "2"]
         call(args, stdout=PIPE, stdin=PIPE, stderr=PIPE, shell=False)
-        os.remove(gens)
+        os.remove(gens.name)
     else:
         args = [jellyfish, "count", "-C", "-m", str(kmer), "-s", "100M", "-t",\
             str(mycores), "-o", hash.name, afastq]
