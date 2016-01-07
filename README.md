@@ -3,7 +3,7 @@ General Utility for Tracking Sequence Similarity
 
 This software was published to accompany the study:
 
-An alignment free sequence comparison method for use in human intestinal microbiome and fecal microbiota transplantation analysis, by Brittnacher, et al, 2015
+An alignment free sequence comparison method for use in human intestinal microbiome and fecal microbiota transplantation analysis, by Brittnacher, et al, 2016
 
 Please cite this paper if you use GUTSS for your project.
 
