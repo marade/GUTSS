@@ -5,7 +5,7 @@ This software was published to accompany the study:
 
 GUTSS: An Alignment-Free Sequence Comparison Method for Use in Human Intestinal Microbiome and Fecal Microbiota Transplantation Analysis
 
-Mitchell J. Brittnacher , Sonya L. Heltshe, Hillary S. Hayden, Matthew C. Radey, Eli J. Weiss, Christopher J. Damman, Timothy L. Zisman, David L. Suskind, Samuel I. Miller
+Mitchell J. Brittnacher, Sonya L. Heltshe, Hillary S. Hayden, Matthew C. Radey, Eli J. Weiss, Christopher J. Damman, Timothy L. Zisman, David L. Suskind, Samuel I. Miller
 
 Published: July 8, 2016 http://dx.doi.org/10.1371/journal.pone.0158897
 
