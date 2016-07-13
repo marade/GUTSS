@@ -30,11 +30,12 @@ from multiprocessing import cpu_count
 from subprocess import PIPE, call
 from tempfile import NamedTemporaryFile
 from itertools import izip
+from multiprocessing import Process, Queue
 
 #------------------------------------------------------------------------------
 # global variables
 #------------------------------------------------------------------------------
-version = "1.0.2"
+version = "1.0.3"
 procmem = "/proc/meminfo" 
 
 #------------------------------------------------------------------------------
@@ -214,13 +215,16 @@ def make_kmer_hash(afastq, apair, kmer, cat, jellyfish, tempdir, mycores):
 
     return hash.name
 
-def call_qps(xhash, xfast, ofile, qps):
+def call_qps(xhash, xfast, xpair, ofile, qps):
     '''Constructs call to query_per_sequence
        to read hashes and write counts to tmp files'''
 
     # application call
     logging.info('Starting...')
-    args1 = [qps, xhash, xfast]
+    if xpair == None:
+        args1 = [qps, xhash, xfast]
+    else:
+        args1 = [qps, xhash, xfast, xpair]
     call(args1, stdout=ofile, shell=False)
     logging.info('...Exiting')
 
@@ -255,7 +259,7 @@ def meminfo():
             meminfo[line.split(':')[0]] = line.split(':')[1].strip()
     return meminfo
 
-def read_hashes(ahash, bhash, afast, bfast, qps, tempdir):
+def read_hashes(ahash, bhash, afast, apair, bfast, bpair, qps, tempdir):
     '''Enumerate k-mers:
        for k-mers in A reads:
            AvA: counts in A
@@ -271,11 +275,17 @@ def read_hashes(ahash, bhash, afast, bfast, qps, tempdir):
     if not os.path.isfile(afast):
         logging.error(afast + ' file is missing')
         sys.exit()
+    if not apair == None and not os.path.isfile(apair):
+        logging.error(apair + ' file is missing')
+        sys.exit()
     if not os.path.isfile(bhash):
         logging.error(bhash + ' file is missing')
         sys.exit()
     if not os.path.isfile(bfast):
         logging.error(bfast + ' file is missing')
+        sys.exit()
+    if not bpair == None and not os.path.isfile(bpair):
+        logging.error(bpair + ' file is missing')
         sys.exit()
 
     etext = "Writing hash count: " + ahash + " " + bhash
@@ -292,13 +302,13 @@ def read_hashes(ahash, bhash, afast, bfast, qps, tempdir):
 
     # construct threads for reading k-mer hash, writing counts to tmp file
     t1 = threading.Thread(name='AvA-thread', target=call_qps,\
-        args=(ahash, afast, AvA, qps,))
+        args=(ahash, afast, apair, AvA, qps,))
     t2 = threading.Thread(name='AvB-thread', target=call_qps,\
-        args=(bhash, afast, AvB, qps,))
+        args=(bhash, afast, apair, AvB, qps,))
     t3 = threading.Thread(name='BvB-thread', target=call_qps,\
-        args=(bhash, bfast, BvB, qps,))
+        args=(bhash, bfast, bpair, BvB, qps,))
     t4 = threading.Thread(name='BvA-thread', target=call_qps,\
-        args=(ahash, bfast, BvA, qps,))
+        args=(ahash, bfast, bpair, BvA, qps,))
 
     # execute
     m1.setDaemon(True)
@@ -325,16 +335,28 @@ def load_read_counts(cfile):
     # return lines from cfile as list
     return [line[:-1] for line in open(cfile)]
 
-def sum_indicator_functions(AA, AB):
+def sum_indicator_functions(AAfile, ABfile, queue, label):
     '''Returns the number of reads with lesser and equal differences'''
 
+    logging.info("Loading " + label + " read counts...")
+    if not os.path.isfile(AAfile):
+        logging.error(AAfile + ' is missing')
+        sys.exit()
+    if not os.path.isfile(ABfile):
+        logging.error(ABfile + ' is missing')
+        sys.exit()
+
     # counts = [number A<B, number A=B, total number of A reads]
+    AA = load_read_counts(AAfile)
+    delete_files((AAfile,))
+    AB = load_read_counts(ABfile)
+    delete_files((ABfile,))
     counts = [0, 0, len(AA)]
 
     # process read counts
     for i in range(len(AA)):
         if ((i + 1) % 1000000) == 0:
-            etext = i + 1, "reads processed..."
+            etext = i + 1, label + " reads processed..."
             logging.info(etext)
 
         # k-mer counts for x reads: 
@@ -359,7 +381,7 @@ def sum_indicator_functions(AA, AB):
         if sum < 0: counts[0] += 1      # x < y
         elif sum == 0: counts[1] += 1   # x = y
 
-    return counts
+    queue.put(counts)
 
 def format_type(item):
     '''Determines type for item; returns format string'''
@@ -419,7 +441,7 @@ def main():
     opts.afastq = os.path.abspath(opts.afastq)
     opts.bfastq = os.path.abspath(opts.bfastq)
     if opts.apair != None: opts.apair = os.path.abspath(opts.apair)
-    if opts.bpair != None: opts.apair = os.path.abspath(opts.bpair)
+    if opts.bpair != None: opts.bpair = os.path.abspath(opts.bpair)
     opts.outfile = os.path.abspath(opts.outfile)
     dir_check(opts.tempdir)
     if not os.path.isfile(opts.jellyfish):
@@ -446,46 +468,32 @@ def main():
     print_free_mem()
 
     # read hash and write counts to tmp files
-    aVb, bVa, aVa, bVb = read_hashes(Atmp, Btmp, opts.afastq, opts.bfastq,
-        opts.qps, opts.tempdir)
+    aVb, bVa, aVa, bVb = read_hashes(Atmp, Btmp, opts.afastq, opts.apair,
+        opts.bfastq, opts.bpair, opts.qps, opts.tempdir)
     print_free_mem()
     delete_files((Atmp, Btmp))
     print_free_mem()
     print_etime(start_time)
 
-    # process A reads
-    logging.info("Loading A read counts...")
-    if not os.path.isfile(aVa):
-        logging.error(aVa + ' is missing')
-        sys.exit()
-    if not os.path.isfile(aVb):
-        logging.error(aVb + ' is missing')
-        sys.exit()
-    AvA = load_read_counts(aVa)
-    AvB = load_read_counts(aVb)
-    print_free_mem()
-    logging.info("Calculating A read counts...")
-    AReadCounts = sum_indicator_functions(AvA, AvB)
-    delete_files((aVa, aVb))
+    qa = Queue()
+    qb = Queue()
+
+    # process A reads (afastq against ahash, afastq against bhash)
+    pa = Process(target=sum_indicator_functions, args=(aVa, aVb, qa, "A"))
+    pa.start()
     print_free_mem()
     print_etime(start_time)
 
     # process B reads
-    logging.info("Loading B read counts...")
-    if not os.path.isfile(bVa):
-        logging.error(bVa + ' is missing')
-        sys.exit()
-    if not os.path.isfile(bVb):
-        logging.error(bVb + ' is missing')
-        sys.exit()
-    BvA = load_read_counts(bVa)
-    BvB = load_read_counts(bVb)
-    print_free_mem()
-    logging.info("Calculating B read counts...")
-    BReadCounts = sum_indicator_functions(BvB, BvA)
-    delete_files((bVb, bVa))
+    pb = Process(target=sum_indicator_functions, args=(bVb, bVa, qb, "B"))
+    pb.start()
     print_free_mem()
     print_etime(start_time)
+
+    pa.join()
+    AReadCounts = qa.get()
+    pb.join()
+    BReadCounts = qb.get()
 
     # calculate similarity
     get_similarity(AReadCounts, BReadCounts, opts.outfile)
